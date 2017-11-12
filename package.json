@@ -1,0 +1,19 @@
+{
+  "name": "@inexorgame/node-dns-service",
+  "version": "0.0.1",
+  "description": "A microservice which assigns DNS entries via UUID",
+  "main": "handler.js",
+  "scripts": {
+    "lint": "eslint handler.js",
+    "test": "mocha "
+  },
+  "author": "The Inexor Team",
+  "license": "Zlib",
+  "dependencies": {
+    "node-uuid": "^1.4.8",
+    "request": "^2.83.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.11.0"
+  }
+}
