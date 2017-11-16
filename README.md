@@ -33,7 +33,7 @@ You can pass `virtual=True` as a parameter, which will mock the request, not cre
 In case `virtual=False` then a DNS record will be created, pointing to the requesters `A` or `AAAA` record, depending on the supported protocol(s).
 
 ### `revoke`
-You can call the `revoke` method by using `DELETE` on the API, passing along your `node` id and `revocationSecret`.
+You can call the `revoke` method by using `DELETE` on the API, passing along the `node` id (as `node` parameter) of your node and `revocationSecret` as `revocationSecret` parameter.
 This will
 
 - remove the DNS entry for your node
@@ -57,10 +57,17 @@ We also have a set of basic enviroment variables, which you can find in the `.en
 
 ### Setting up
 Run `npm install` inside the folder. Then you can use `npm test` and `npm run lint`  to verify your code.
-Please note: We assume that `aws-sdk` is installed via `npm i -g aws-sdk` because this is the case for the lambda environment.
 
 ### Testing
 
 
 ## Deploying
+
+### Preriquites
+You will need:
+
+- an IAM user
+- a hosted zone for the domain
+
+The necessary resources (API gateway and Route53) do not require further setup.
 

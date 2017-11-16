@@ -10,10 +10,14 @@
   "author": "The Inexor Team",
   "license": "Zlib",
   "dependencies": {
+    "aws-sdk": "^2.149.0",
     "node-uuid": "^1.4.8",
     "request": "^2.83.0"
   },
   "devDependencies": {
     "eslint": "^4.11.0"
-  }
+  },
+  "bundleDependencies": [
+    "aws-sdk"
+  ]
 }
