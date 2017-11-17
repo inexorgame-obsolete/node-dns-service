@@ -4,7 +4,7 @@ const net = require('net');
 const AWS = require('aws-sdk');
 const request = require('request');
 const TTL = 3600; // Expire a domain name after 1 hour if deleted
-console.time("init")
+const TABLE = 'nodes'; // The default name of the table
 
 let docClient = new AWS.DynamoDB.DocumentClient();
 let route53 = new AWS.Route53();
@@ -21,7 +21,7 @@ module.exports.register = (event, context, callback) => {
     let revocationSecret = crypto.randomBytes(20).toString("hex");
 
     let params = {
-        TableName: 'nodes',
+        TableName: TABLE,
         Item: {
             'node': id,
             'revocationSecret': revocationSecret,
@@ -31,32 +31,42 @@ module.exports.register = (event, context, callback) => {
 
     docClient.put(params, (err, data) => {
         if (err) {
-            callback(err, null);
+            callback(err);
         }
 
         let params = {
             ChangeBatch: {
-                Changes: {
-                    Action: 'CREATE',
-                    ResourceRecordSet: {
-                        Name: `${id}.${process.env.BASE_DOMAIN}`,
-                        ResourceRecords: {
-                            Value: context.identity.sourceIp
+                Changes: [
+                    {
+                        Action: 'CREATE',
+                        ResourceRecordSet: {
+                            Name: `${id}.${process.env.BASE_DOMAIN}`,
+                            ResourceRecords: [
+                                {
+                                    Value: event.headers['X-Forwarded-For'].split(',')[0]
+                                }
+                            ],
+                            TTL: TTL,
+                            Type: (net.isIPv4(event.headers['X-Forwarded-For'].split(',')[0])) ? 'A' : 'AAAA' // we don't check for invalid IP's because that's kinda pointless
                         },
-                        TTL: TTL,
-                        Type: (net.isIPv4(context.identity.sourceIp)) ? 'A' : 'AAAA' // we don't check for invalid IP's because that's kinda pointless
-                    },
-                    Comment: `Auto generated DNS entry at ${new Date().toISOString()}`
-                },
-                HostedZoneId: process.env.HOSTED_ZONE_ID
-            }
+                    }
+                ],
+                Comment: `Auto generated DNS entry at ${new Date().toISOString()}`
+            },
+            HostedZoneId: process.env.HOST_ZONE_ID
         }
 
         route53.changeResourceRecordSets(params, (err, data) => {
             if (err) {
-                callback(err, null);
+                callback(err);
             } else {
-                callback(null, data);
+                callback(null, {
+                    statusCode: 200,
+                    body: JSON.stringify({
+                        'node': id,
+                        'revocationSecret': revocationSecret
+                    })
+                });
             }
         })
     })
@@ -67,49 +77,82 @@ module.exports.register = (event, context, callback) => {
  * @function revoke
  */
 module.exports.revoke = (event, context, callback) => {
-    if (context.queryStringParameters.node === undefined && context.queryStringParameters.revocationSecret === undefined) {
+    if (event.queryStringParameters.node === undefined && event.queryStringParameters.revocationSecret === undefined) {
         callback(`Invalid request. Please provide both node and revocationSecret parameters`, null);
     }
 
     let params = {
-        TableName: 'nodes',
-        Item: {
-            'node': context.queryStringParameters.node,
-            'revocationSecret': context.queryStringParameters.revocationSecret,
-            'revoked': true
+        TableName: TABLE,
+        Key: {
+            'node': event.queryStringParameters.node
         }
     }
 
-    docClient.put(params, (err, data) => {
+    docClient.get(params, (err, data) => {
         if (err) {
-            callback(err, null);
-        }
+            callback(err);
+        } else {
+            if (data.Item.revocationSecret != event.queryStringParameters.revocationSecret) {
+                callback(new Error(`Trying to update node ${event.queryStringParameters.node} with invalid revocationSecret`))
+            }
 
-        let params = {
-            ChangeBatch: {
-                Changes: {
-                    Action: 'DELETE',
-                    ResourceRecordSet: {
-                        Name: `${id}.${process.env.BASE_DOMAIN}`,
-                        ResourceRecords: {
-                            Value: context.identity.sourceIp
-                        },
-                        TTL: TTL,
-                        Type: (net.isIPv4(context.identity.sourceIp)) ? 'A' : 'AAAA' // we don't check for invalid IP's because that's kinda pointless
-                    },
-                    Comment: `Auto generated DNS entry at ${new Date().toISOString()}`
+            let params = {
+                TableName: TABLE,
+                Key: {
+                    'node': event.queryStringParameters.node
                 },
-                HostedZoneId: process.env.HOSTED_ZONE_ID
+                ExpressionAttributeNames: {
+                    "#R": "revoked"
+                },
+                ExpressionAttributeValues: {
+                    ":r": {
+                        B: true
+                    }
+                },
+                UpdateExpression: 'SET #R = :r'
             }
-        }
 
-        route53.changeResourceRecordSets(params, (err, data) => {
-            if (err) {
-                callback(err, null);
-            } else {
-                callback(null, data);
-            }
-        })
+            docClient.update(params, (err, data) => {
+                if (err) {
+                    callback(err);
+                }
+
+                let params = {
+                    ChangeBatch: {
+                        Changes: [
+                            {
+                                Action: 'DELETE',
+                                ResourceRecordSet: {
+                                    Name: `${event.queryStringParameters.node}.${process.env.BASE_DOMAIN}`,
+                                    ResourceRecords: [
+                                        {
+                                            Value: event.headers['X-Forwarded-For'].split(',')[0]
+                                        }
+                                    ],
+                                    TTL: TTL,
+                                    Type: (net.isIPv4(event.headers['X-Forwarded-For'].split(',')[0])) ? 'A' : 'AAAA' // we don't check for invalid IP's because that's kinda pointless
+                                },
+                            }
+                        ],
+                        Comment: `Auto generated DNS deletion at ${new Date().toISOString()}`
+                    },
+                    HostedZoneId: process.env.HOST_ZONE_ID
+                }
+
+                route53.changeResourceRecordSets(params, (err, data) => {
+                    if (err) {
+                        callback(err);
+                    } else {
+                        callback(null, {
+                            statusCode: 200,
+                            body: JSON.stringify({
+                                message: `Successfully revoked node ${event.queryStringParameters.node}`
+                            })
+                        });
+                    }
+                })
+            })
+        }
     })
 }
 
@@ -118,8 +161,7 @@ module.exports.revoke = (event, context, callback) => {
  * @function update_aliases
  */
 module.exports.update_aliases = (event, context, callback) => {
-    const request = require('request');
-    request(process.env.BASE_DOMAIN, (error, response, body) => {
+    request(process.env.ALIAS_FILE, (error, response, body) => {
         if (error) {
             callback(error, null);
         }
@@ -130,8 +172,9 @@ module.exports.update_aliases = (event, context, callback) => {
             let params = {
                 ChangeBatch: {
                     Changes: [],
-                    HostedZoneId: process.env.HOSTED_ZONE_ID
-                }
+                    Comment: `Automatically inserted alias ${alias.alias} at ${new Date().toISOString()}`
+                },
+                HostedZoneId: process.env.HOSTED_ZONE_ID
             }
 
             /**
@@ -153,8 +196,7 @@ module.exports.update_aliases = (event, context, callback) => {
                         },
                         TTL: TTL,
                         Type: 'CNAME'
-                    },
-                    Comment: `Automatically inserted alias ${alias.alias} at ${new Date().toISOString()}`
+                    }
                 })
             })
 
@@ -163,7 +205,10 @@ module.exports.update_aliases = (event, context, callback) => {
                     if (err) {
                         callback(err, null);
                     } else {
-                        callback(null, data);
+                        callback(null, {
+                            statusCode: 200,
+                            data: JSON.stringify(data)
+                        });
                     }
                 })
             } else {
