@@ -92,7 +92,9 @@ module.exports.revoke = (event, context, callback) => {
         if (err) {
             callback(err);
         } else {
-            if (data.Item.revocationSecret != event.queryStringParameters.revocationSecret) {
+            if (data.Item.revoked) {
+                callback(new Error(`Trying to revoke already revoked node ${event.queryStringParameters.node}`))
+            } else if (data.Item.revocationSecret != event.queryStringParameters.revocationSecret) {
                 callback(new Error(`Trying to update node ${event.queryStringParameters.node} with invalid revocationSecret`))
             }
 
@@ -102,12 +104,10 @@ module.exports.revoke = (event, context, callback) => {
                     'node': event.queryStringParameters.node
                 },
                 ExpressionAttributeNames: {
-                    "#R": "revoked"
+                    "#R": "revoked",
                 },
                 ExpressionAttributeValues: {
-                    ":r": {
-                        B: true
-                    }
+                    ":r": true
                 },
                 UpdateExpression: 'SET #R = :r'
             }
@@ -167,14 +167,16 @@ module.exports.update_aliases = (event, context, callback) => {
         }
 
         try {
-            const aliases = JSON.parse(body);
+            const { aliases } = JSON.parse(body);
 
             let params = {
                 ChangeBatch: {
-                    Changes: [],
-                    Comment: `Automatically inserted alias ${alias.alias} at ${new Date().toISOString()}`
+                    Changes: [
+
+                    ],
+                    Comment: `Automatically inserted ${aliases.length} aliases at ${new Date().toISOString()}`
                 },
-                HostedZoneId: process.env.HOSTED_ZONE_ID
+                HostedZoneId: process.env.HOST_ZONE_ID
             }
 
             /**
@@ -191,9 +193,11 @@ module.exports.update_aliases = (event, context, callback) => {
                     Action: 'UPSERT',
                     ResourceRecordSet: {
                         Name: `${alias.alias}.${process.env.BASE_DOMAIN}`,
-                        ResourceRecords: {
-                            Value: alias.node
-                        },
+                        ResourceRecords: [
+                            {
+                                Value: alias.node
+                            }
+                        ],
                         TTL: TTL,
                         Type: 'CNAME'
                     }
