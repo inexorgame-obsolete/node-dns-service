@@ -29,7 +29,7 @@ module.exports.register = (event, context, callback) => {
         }
     }
 
-    docClient.put(params, (err, data) => {
+    docClient.put(params, (err) => {
         if (err) {
             callback(err);
         }
@@ -56,7 +56,7 @@ module.exports.register = (event, context, callback) => {
             HostedZoneId: process.env.HOST_ZONE_ID
         }
 
-        route53.changeResourceRecordSets(params, (err, data) => {
+        route53.changeResourceRecordSets(params, (err) => {
             if (err) {
                 callback(err);
             } else {
@@ -112,7 +112,7 @@ module.exports.revoke = (event, context, callback) => {
                 UpdateExpression: 'SET #R = :r'
             }
 
-            docClient.update(params, (err, data) => {
+            docClient.update(params, (err) => {
                 if (err) {
                     callback(err);
                 }
@@ -139,7 +139,7 @@ module.exports.revoke = (event, context, callback) => {
                     HostedZoneId: process.env.HOST_ZONE_ID
                 }
 
-                route53.changeResourceRecordSets(params, (err, data) => {
+                route53.changeResourceRecordSets(params, (err) => {
                     if (err) {
                         callback(err);
                     } else {
