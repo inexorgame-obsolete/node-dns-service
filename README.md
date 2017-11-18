@@ -76,3 +76,13 @@ After you created an IAM user and a hosted zone do the following
 - `serverless deploy`
 
 That's it. Serverless will tell you where the API endpoints are. Have fun!
+
+### Price
+
+- Lambda will serve 1 million requests for free for us, very unlikely to hit this limit (the functions run in <10 ms, with <50MB RAM)
+- DynamoDB offers 10GB free storage and 1 million reads/writes per month (unlikely to hit)
+- S3 provides 1 GB free storage, we need about 8 MB
+- Route53 is free for 1 million standard queries per month (unlikely)
+    - hosted zone costs 0.50 Dolar / month
+    
+=> 0.50 dolar / month
