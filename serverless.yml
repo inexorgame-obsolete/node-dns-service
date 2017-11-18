@@ -3,31 +3,12 @@ service: node-dns
 provider:
   name: aws
   runtime: nodejs6.10
-
-stage: dev
-region: eu-central-1
-
-# you can add statements to the Lambda function's IAM Role here
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:ListBucket"
-#      Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:PutObject"
-#      Resource:
-#        Fn::Join:
-#          - ""
-#          - - "arn:aws:s3:::"
-#            - "Ref" : "ServerlessDeploymentBucket"
-#            - "/*"
-
-environment:
-  BASE_DOMAIN: node.inexor.network
-  HOST_ZONE_ID: someid
-  ALIAS_FILE: https://raw.githubusercontent.com/inexorgame/blog-data/config/alias.json
-
+  stage: dev
+  region: eu-central-1
+  environment:
+    BASE_DOMAIN: inexortestnetwork.tk
+    HOST_ZONE_ID: Z2KXYONGFSRPE1
+    ALIAS_FILE: https://gist.githubusercontent.com/Fohlen/9a0f106ab12a0cc4202ed87c6b18fae6/raw/fdd085dd799a137e7c4f6f92f9b2474801da27da/alias-test.json
 
 functions:
   register:
@@ -35,7 +16,7 @@ functions:
     events:
       - http:
           path: register
-          method: get
+          method: put
   revoke:
     handler: handler.revoke
     events:
