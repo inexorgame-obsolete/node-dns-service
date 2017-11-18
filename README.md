@@ -7,6 +7,7 @@ It makes use of Amazon Web Service, specifically using
 - AWS Lambda
 - AWS DynamoDB
 - AWS Route 53
+- AWS S3
 - AWS CloudFormation
 
 # Overview
@@ -50,15 +51,9 @@ Once we approved your alias, a CNAME record will be added for the specified `nod
 We use the following toolchain
 
 - `serverless` for deployment and integration testing
-- `mocha` and `chai` for unit tests
 - `eslint` for linting
 
-We also have a set of basic enviroment variables, which you can find in the `.env` file.
-
-### Setting up
-Run `npm install` inside the folder. Then you can use `npm test` and `npm run lint`  to verify your code.
-
-### Testing
+We also have a set of basic enviroment variables, which you can find in the `serverless.yml#provider` config.
 
 
 ## Deploying
@@ -66,8 +61,18 @@ Run `npm install` inside the folder. Then you can use `npm test` and `npm run li
 ### Preriquites
 You will need:
 
-- an IAM user
 - a hosted zone for the domain
 
-The necessary resources (API gateway and Route53) do not require further setup.
+Everything else will be set up for you automagically.
 
+### Get started
+
+After you created an IAM user and a hosted zone do the following
+
+- update the `BASE_DOMAIN`, `ALIAS_FILE` environment variables in `serverless.yml`
+- update the `HOST_ZONE_ID` variable in `serverless.yml#custom`
+- `npm install -g serverless` 
+- set up your IAM user for serverless, see [this link](bit.ly/aws-creds-setup)
+- `serverless deploy`
+
+That's it. Serverless will tell you where the API endpoints are. Have fun!

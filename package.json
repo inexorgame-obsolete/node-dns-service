@@ -4,8 +4,7 @@
   "description": "A microservice which assigns DNS entries via UUID",
   "main": "handler.js",
   "scripts": {
-    "lint": "eslint handler.js",
-    "test": "mocha "
+    "lint": "eslint handler.js"
   },
   "author": "The Inexor Team",
   "license": "Zlib",
