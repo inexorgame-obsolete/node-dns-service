@@ -27,11 +27,9 @@ To overcome this problem, we wrote the `node-dns-service`, which tries to solve 
 There is two methods in the service flow
 
 ### `register`
+Call `PUT` on `register`
 This will register a new node to issue a domain for.
 It returns both the `node` id, and a `revocationSecret`.
-You can pass `virtual=True` as a parameter, which will mock the request, not creating a DNS entry.
-
-In case `virtual=False` then a DNS record will be created, pointing to the requesters `A` or `AAAA` record, depending on the supported protocol(s).
 
 ### `revoke`
 You can call the `revoke` method by using `DELETE` on the API, passing along the `node` id (as `node` parameter) of your node and `revocationSecret` as `revocationSecret` parameter.
