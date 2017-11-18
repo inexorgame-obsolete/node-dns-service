@@ -9,6 +9,20 @@ provider:
     BASE_DOMAIN: inexortestnetwork.tk
     HOST_ZONE_ID: Z2KXYONGFSRPE1
     ALIAS_FILE: https://gist.githubusercontent.com/Fohlen/9a0f106ab12a0cc4202ed87c6b18fae6/raw/fdd085dd799a137e7c4f6f92f9b2474801da27da/alias-test.json
+  resources:
+    Resources:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: nodes
+        AttributeDefinitions:
+          - AttributeName: node
+            KeyType: S
+        KeySchema:
+          - AttributeName: node
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
 
 functions:
   register:
